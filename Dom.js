@@ -3,7 +3,9 @@ import Data from './Data.js';
 export default class Dom {
 
     static {
-        addEventListener('DOMContentLoaded', () => Dom.onReady(Dom.getMapping()));
+        if (Dom.isBrowser()) {
+            addEventListener('DOMContentLoaded', () => Dom.onReady(Dom.getMapping()));
+        }
     }
 
     /**
@@ -139,6 +141,13 @@ export default class Dom {
         };
         controlInput.onchange = update;
         update();
+    }
+
+    /**
+     * @returns True if the current runtime is a browser, false otherwise.
+     */
+    static isBrowser() {
+        return 'window' in globalThis;
     }
 
 }
