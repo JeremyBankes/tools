@@ -4,7 +4,11 @@ export default class Dom {
 
     static {
         if (Dom.isBrowser()) {
-            addEventListener('DOMContentLoaded', () => Dom.onReady(Dom.getMapping()));
+            addEventListener('DOMContentLoaded', () => {
+                if (Dom.onReady !== null) {
+                    Dom.onReady(Dom.getMapping());
+                }
+            });
         }
     }
 
@@ -16,7 +20,7 @@ export default class Dom {
      * Called when the DOM content is loaded
      * @type {OnDomReadyCallback}
      */
-    static onReady;
+    static onReady = null;
 
     /**
      * Returns an ElementMapping of all elements in 'root'
@@ -122,6 +126,70 @@ export default class Dom {
                 }
             }
         }
+    }
+
+    /**
+     * @callback FormSuccessCallback
+     * @param {object} data
+     * @returns {Promise<boolean>}
+     * 
+     * @callback FormErrorCallback
+     * @param {object} data
+     * @returns {Promise<boolean>}
+     * 
+     * @param {HTMLFormElement} form
+     * @param {FormSuccessCallback} [successCallback]
+     * @param {FormErrorCallback} [errorCallback]
+     */
+    static setFormSubmitListener(form, successCallback, errorCallback = null) {
+        form.onsubmit = (event) => {
+            if (event instanceof SubmitEvent) {
+                const form = event.target;
+                if (form instanceof HTMLFormElement) {
+                    const inputs = form.querySelectorAll('input[name]:not(:disabled),textarea[name]:not(:disabled),select[name]:not(:disabled)');
+                    const data = {};
+                    for (const input of inputs) {
+                        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement) {
+                            let value = null;
+                            switch (input.type) {
+                                case 'checkbox':
+                                    if (input instanceof HTMLInputElement) {
+                                        if (input.hasAttribute('value')) {
+                                            if (input.checked) {
+                                                value = input.value;
+                                            }
+                                        } else {
+                                            value = input.checked;
+                                        }
+                                    }
+                                    break;
+                                case 'number':
+                                    value = parseFloat(input.value);
+                                    break;
+                                default:
+                                    value = input.value;
+                                    break;
+                            }
+                            if (value !== null) {
+                                Data.set(data, input.name, value);
+                            }
+                        }
+                    }
+                    Promise.resolve(successCallback(data)).then(result => {
+                        if (result) {
+                            form.reset();
+                        }
+                    }).catch((error) => {
+                        console.warn(error);
+                        if (errorCallback !== null) {
+                            errorCallback(error);
+                        }
+                    });
+                }
+            }
+            return false;
+        };
+        return {};
     }
 
     /**

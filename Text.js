@@ -31,6 +31,40 @@ export default class Text {
     }
 
     /**
+     * @param {string} singular
+     * @param {number} count
+     */
+    static pluralize(singular, count) {
+        if (count == 1) {
+            return singular;
+        }
+        const plural = {
+            '(quiz)$': "$1zes", '^(ox)$': "$1en", '([m|l])ouse$': "$1ice", '(matr|vert|ind)ix|ex$': "$1ices", '(x|ch|ss|sh)$': "$1es", '([^aeiouy]|qu)y$': "$1ies",
+            '(hive)$': "$1s", '(?:([^f])fe|([lr])f)$': "$1$2ves", '(shea|lea|loa|thie)f$': "$1ves", 'sis$': "ses", '([ti])um$': "$1a", '(tomat|potat|ech|her|vet)o$': "$1oes",
+            '(bu)s$': "$1ses", '(alias)$': "$1es", '(octop)us$': "$1i", '(ax|test)is$': "$1es", '(us)$': "$1es", '([^s]+)$': "$1s"
+        };
+        const irregular = { 'move': 'moves', 'foot': 'feet', 'goose': 'geese', 'sex': 'sexes', 'child': 'children', 'man': 'men', 'tooth': 'teeth', 'person': 'people' };
+        const uncountable = ['sheep', 'fish', 'deer', 'moose', 'series', 'species', 'money', 'rice', 'information', 'equipment'];
+        if (uncountable.indexOf(singular.toLowerCase()) >= 0) {
+            return singular;
+        }
+        for (const word in irregular) {
+            const pattern = new RegExp(word + '$', 'i');
+            const replace = irregular[word];
+            if (pattern.test(singular)) {
+                return singular.replace(pattern, replace);
+            }
+        }
+        for (const expression in plural) {
+            const pattern = new RegExp(expression, 'i');
+            if (pattern.test(singular)) {
+                return singular.replace(pattern, plural[expression]);
+            }
+        }
+        return singular;
+    }
+
+    /**
      * Converts a date object into strings of various formats
      * @param {Date} date
      * @param {'iso'|'form'|'pretty'} [format]
@@ -91,6 +125,53 @@ export default class Text {
         const hours = parseInt(formTimeString.substring(0, 2));
         const minutes = parseInt(formTimeString.substring(3, 5));
         return hours + minutes / 60;
+    }
+
+    /**
+     * @param {number} milliseconds
+     */
+    static toDurationString(milliseconds, showDays = true, showHours = true, showMinutes = true, showSeconds = true, showMilliseconds = false) {
+        const secondInMilliseconds = 1000;
+        const minuteInMilliseconds = secondInMilliseconds * 60;
+        const hourInMilliseconds = minuteInMilliseconds * 60;
+        const dayInMilliseconds = hourInMilliseconds * 24;
+        let days = 0;
+        let hours = 0;
+        let minutes = 0;
+        let seconds = 0;
+        if (showDays) {
+            days = Math.floor(milliseconds / dayInMilliseconds);
+            milliseconds -= days * dayInMilliseconds;
+        }
+        if (showHours) {
+            hours = Math.floor(milliseconds / hourInMilliseconds);
+            milliseconds -= hours * hourInMilliseconds;
+        }
+        if (showMinutes) {
+            minutes = Math.floor(milliseconds / minuteInMilliseconds);
+            milliseconds -= minutes * minuteInMilliseconds;
+        }
+        if (showSeconds) {
+            seconds = Math.floor(milliseconds / secondInMilliseconds);
+            milliseconds -= seconds * secondInMilliseconds;
+        }
+        if (!showMilliseconds) {
+            seconds += Math.round(milliseconds / secondInMilliseconds);
+            milliseconds = 0;
+        }
+        const line = [];
+        if (days > 0) {
+            line.push(days + ' ' + Text.pluralize('day', days));
+        } else if (hours > 0) {
+            line.push(hours + ' ' + Text.pluralize('hour', hours));
+        } else if (minutes > 0) {
+            line.push(minutes + ' ' + Text.pluralize('minute', minutes));
+        } else if (seconds > 0) {
+            line.push(seconds + ' ' + Text.pluralize('second', seconds));
+        } else if (milliseconds > 0) {
+            line.push(milliseconds + ' ' + Text.pluralize('millisecond', milliseconds));
+        }
+        return line.join(', ');
     }
 
 }
