@@ -5,9 +5,12 @@ export default class Dom {
     static {
         if (Dom.isBrowser()) {
             addEventListener('DOMContentLoaded', () => {
-                if (Dom.onReady !== null) {
-                    Dom.onReady(Dom.getMapping());
-                }
+                const mapping = Dom.getMapping();
+                Promise.all(Dom.onReadyListeners.map(listener => listener(mapping))).catch(error => {
+                    for (const errorListner of Dom.onErrorListeners) {
+                        errorListner(error, mapping);
+                    }
+                });
             });
         }
     }
@@ -15,12 +18,23 @@ export default class Dom {
     /**
      * @callback OnDomReadyCallback
      * @param {ElementMapping} mapping
-     * @returns {void}
+     * @returns {void|Promise<void>}
      * 
      * Called when the DOM content is loaded
-     * @type {OnDomReadyCallback}
+     * @type {OnDomReadyCallback[]}
      */
-    static onReady = null;
+    static onReadyListeners = [];
+
+    /**
+     * @callback OnDomErrorCallback
+     * @param {Error} error
+     * @param {ElementMapping} mapping
+     * @returns {void}
+     * 
+     * Called if an error occurs while executing the {@link Network.onReady} callback.
+     * @type {OnDomErrorCallback[]}
+     */
+    static onErrorListeners = [];
 
     /**
      * Returns an ElementMapping of all elements in 'root'
@@ -131,17 +145,21 @@ export default class Dom {
     /**
      * @callback FormSuccessCallback
      * @param {object} data
-     * @returns {Promise<boolean>}
+     * @returns {Promise<boolean>|boolean}
      * 
      * @callback FormErrorCallback
-     * @param {object} data
-     * @returns {Promise<boolean>}
+     * @param {Error} error
+     * @returns {void}
+     * 
+     * @callback FormFinallyCallback
+     * @returns {void}
      * 
      * @param {HTMLFormElement} form
      * @param {FormSuccessCallback} [successCallback]
      * @param {FormErrorCallback} [errorCallback]
+     * @param {FormFinallyCallback} [finallyCallback]
      */
-    static setFormSubmitListener(form, successCallback, errorCallback = null) {
+    static setFormSubmitListener(form, successCallback, errorCallback = null, finallyCallback = null) {
         form.onsubmit = (event) => {
             if (event instanceof SubmitEvent) {
                 const form = event.target;
@@ -183,6 +201,10 @@ export default class Dom {
                         console.warn(error);
                         if (errorCallback !== null) {
                             errorCallback(error);
+                        }
+                    }).finally(() => {
+                        if (finallyCallback !== null) {
+                            finallyCallback();
                         }
                     });
                 }

@@ -57,7 +57,7 @@ export default class Data {
      */
     static set(destination, path, value) {
         if (typeof path === 'string') {
-            path = path.split('.');
+            path = path.match(/[^.\[\]]+/g);
         }
         const key = path.shift();
         if (key === undefined) {
@@ -66,7 +66,7 @@ export default class Data {
             destination[key] = value;
         } else {
             if (!(key in destination)) {
-                destination[key] = {};
+                destination[key] = isNaN(parseInt(path[0])) ? {} : [];
             }
             Data.set(destination[key], path, value);
         }
@@ -100,7 +100,7 @@ export default class Data {
     /** 
      * @callback ObjectValueCallback
      * @param {any} value
-     * @param {string} string
+     * @param {string} path
      * @returns {void}
      * 
      * Calls {@link callback} for every value in {@link source}
@@ -115,7 +115,7 @@ export default class Data {
         const walk = (source, path) => {
             for (const key in source) {
                 const value = source[key];
-                if (typeof value === 'object') {
+                if (typeof value === 'object' && !Array.isArray(value)) {
                     walk(value, [...path, key]);
                 } else {
                     callback(value, [...path, key].join('.'));
