@@ -29,6 +29,10 @@ export default class Network {
         if (Network.defaults.host !== null && url.match(/^[a-zA-Z]+:\/\//) === null) {
             url = Network.defaults.host + url;
         }
+        if (body !== null && body !== undefined) {
+            body = JSON.stringify(body);
+            headers['content-type'] = 'application/json';
+        }
         const request = {
             method: method,
             credentials: /** @type {RequestCredentials} */ ('include'),
@@ -38,9 +42,6 @@ export default class Network {
                 ...headers
             }
         };
-        if (body !== null && body !== undefined) {
-            body = JSON.stringify(body);
-        }
         if (typeof body === 'string') {
             request.body = body;
         }

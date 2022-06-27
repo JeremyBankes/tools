@@ -61,7 +61,7 @@ export default class Data {
         }
         const key = path.shift();
         if (key === undefined) {
-            throw new Error(`Invalid path "${path.join('.')}".`);
+            throw new Error(`Invalid path "${Data.getPathString(path)}".`);
         } else if (path.length === 0) {
             destination[key] = value;
         } else {
@@ -84,7 +84,7 @@ export default class Data {
         }
         const key = path.shift();
         if (key === undefined) {
-            throw new Error(`Invalid path "${path.join('.')}".`);
+            throw new Error(`Invalid path "${Data.getPathString(path)}".`);
         } else if (key in source) {
             if (path.length === 0) {
                 const value = source[key];
@@ -106,8 +106,9 @@ export default class Data {
      * Calls {@link callback} for every value in {@link source}
      * @param {object} source Source object
      * @param {ObjectValueCallback} callback Called for every value in {@link source}
+     * @param {boolean} traverseArray True to traverse into an array, false to treat an array as a ending value
      */
-    static walk(source, callback) {
+    static walk(source, callback, traverseArray = false) {
         /**
          * @param {Object} source
          * @param {string[]} path
@@ -115,14 +116,33 @@ export default class Data {
         const walk = (source, path) => {
             for (const key in source) {
                 const value = source[key];
-                if (typeof value === 'object' && !Array.isArray(value)) {
-                    walk(value, [...path, key]);
+                const newPath = [...path, key];
+                if (typeof value === 'object' && (traverseArray || !Array.isArray(value))) {
+                    walk(value, newPath);
                 } else {
-                    callback(value, [...path, key].join('.'));
+                    callback(value, Data.getPathString(newPath));
                 }
             }
         };
         walk(source, []);
+    }
+
+    /**
+     * @param {string[]} path 
+     */
+    static getPathString(path) {
+        const stringPath = [];
+        for (const piece of path) {
+            if (isNaN(parseInt(piece))) {
+                stringPath.push('.');
+                stringPath.push(piece);
+            } else {
+                stringPath.push('[');
+                stringPath.push(piece);
+                stringPath.push(']');
+            }
+        }
+        return stringPath.join('').substring(1);
     }
 
     /**
@@ -157,6 +177,21 @@ export default class Data {
             Data.set(object, key, flatObject[key]);
         }
         return object;
+    }
+
+    /**
+     * Ensures that a given object has 'path'
+     * @template {any} T
+     * @param {object} destination
+     * @param {string|string[]} path
+     * @param {T} fallback
+     * @returns {T}
+     */
+    static ensure(destination, path, fallback) {
+        if (!this.has(destination, path)) {
+            this.set(destination, path, fallback);
+        }
+        return this.get(destination, path);
     }
 
 }
