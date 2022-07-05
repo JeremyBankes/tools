@@ -2,28 +2,45 @@ import Data from './Data.js';
 
 export default class Dom {
 
-    static {
-        if (Dom.isBrowser()) {
-            addEventListener('DOMContentLoaded', () => {
-                if (Dom.onReady !== null) {
-                    Dom.onReady(Dom.getMapping());
-                }
-            });
-        }
-    }
-
     /**
      * @callback OnDomReadyCallback
      * @param {ElementMapping} mapping
-     * @returns {void}
+     * @returns {void|Promise<void>}
      * 
      * Called when the DOM content is loaded
-     * @type {OnDomReadyCallback}
+     * @type {OnDomReadyCallback[]}
      */
-    static onReady = null;
+    static _onReadyListeners = [];
 
     /**
-     * Returns an ElementMapping of all elements in 'root'
+     * @callback OnDomErrorCallback
+     * @param {Error} error
+     * @param {ElementMapping} mapping
+     * @returns {void}
+     * 
+     * Called if an error occurs while executing the {@link Network.onReady} callback.
+     * @type {OnDomErrorCallback[]}
+     */
+    static _onErrorListeners = [];
+
+    /**
+     * Registers a callback to be run when the DOM content loads.
+     * @param {OnDomReadyCallback} listener
+     */
+    static onReady(listener) {
+        Dom._onReadyListeners.push(listener);
+    }
+
+    /**
+     * Registers a callback to be run if an error occurs while executing onReady callbacks.
+     * @param {OnDomErrorCallback} listener
+     */
+    static onError(listener) {
+        Dom._onErrorListeners.push(listener);
+    }
+
+    /**
+     * Returns an ElementMapping of all elements in 'root'.
      * @param {Document|DocumentFragment} root
      * @returns {ElementMapping}
      */
@@ -103,6 +120,37 @@ export default class Dom {
     }
 
     /**
+     * Populates a form's inputs with data
+     * @param {HTMLFormElement} form 
+     * @param {FormData|object} data 
+     */
+    static setFormData(form, data) {
+        /** @type {FormData} */
+        let formData;
+        if (data instanceof FormData) {
+            formData = data;
+        } else {
+            formData = new FormData();
+            Data.walk(data, (value, path) => formData.append(path, value), true);
+        }
+        for (const [key, value] of formData) {
+            if (key in form.elements) {
+                const input = form.elements[key];
+                switch (input.type) {
+                    case 'checkbox':
+                        input.checked = !!value;
+                        break;
+                    default:
+                        input.value = value;
+                        break;
+                }
+            } else {
+                console.warn(`Could not populate form value ${key}. No matching input.`);
+            }
+        }
+    }
+
+    /**
      * Retrieves form data for inputs within a certain section in a form
      * @param {HTMLElement} section 
      */
@@ -157,27 +205,38 @@ export default class Dom {
     }
 
     /**
+     * Creates a client-side form submission handler
+     * 
      * @callback FormSuccessCallback
      * @param {object} data
-     * @returns {Promise<boolean>}
+     * @returns {Promise<boolean>|boolean} Returns true to clear the form, false otherwise
      * 
      * @callback FormErrorCallback
-     * @param {object} data
-     * @returns {Promise<boolean>}
+     * @param {Error} error
+     * @returns {void}
+     * 
+     * @callback FormFinallyCallback
+     * @returns {void}
      * 
      * @param {HTMLFormElement} form
      * @param {FormSuccessCallback} [successCallback]
      * @param {FormErrorCallback} [errorCallback]
+     * @param {FormFinallyCallback} [finallyCallback]
      */
-    static setFormSubmitListener(form, successCallback, errorCallback = null) {
+    static setFormSubmitListener(form, successCallback, errorCallback = null, finallyCallback = null) {
         form.onsubmit = (event) => {
             if (event instanceof SubmitEvent) {
                 const form = event.target;
                 if (form instanceof HTMLFormElement) {
-                    const inputs = form.querySelectorAll('input[name]:not(:disabled),textarea[name]:not(:disabled),select[name]:not(:disabled)');
+                    const inputs = form.querySelectorAll('input[name]:not(:disabled),textarea[name]:not(:disabled),select[name]:not(:disabled),button[name]:not(:disabled)');
                     const data = {};
                     for (const input of inputs) {
-                        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement) {
+                        if (
+                            input instanceof HTMLInputElement
+                            || input instanceof HTMLTextAreaElement
+                            || input instanceof HTMLSelectElement
+                            || input instanceof HTMLButtonElement
+                        ) {
                             let value = null;
                             switch (input.type) {
                                 case 'checkbox':
@@ -203,6 +262,7 @@ export default class Dom {
                             }
                         }
                     }
+                    form.classList.add('loading');
                     Promise.resolve(successCallback(data)).then(result => {
                         if (result) {
                             form.reset();
@@ -212,6 +272,11 @@ export default class Dom {
                         if (errorCallback !== null) {
                             errorCallback(error);
                         }
+                    }).finally(() => {
+                        if (finallyCallback !== null) {
+                            finallyCallback();
+                        }
+                        form.classList.remove('loading');
                     });
                 }
             }
@@ -244,6 +309,21 @@ export default class Dom {
      */
     static isBrowser() {
         return 'window' in globalThis;
+    }
+
+    static {
+        if (Dom.isBrowser()) {
+            addEventListener('DOMContentLoaded', () => {
+                const mapping = Dom.getMapping();
+                Promise.all(Dom._onReadyListeners.map(readyListener => {
+                    readyListener(mapping);
+                })).catch(error => {
+                    for (const errorListner of Dom._onErrorListeners) {
+                        errorListner(error, mapping);
+                    }
+                });
+            });
+        }
     }
 
 }
@@ -306,6 +386,7 @@ class ElementMapping {
     get tablecells() { return /** @type {Object.<string, HTMLTableCellElement>} */ (this._rootView); }
     get tables() { return /** @type {Object.<string, HTMLTableElement>} */ (this._rootView); }
     get tablerows() { return /** @type {Object.<string, HTMLTableRowElement>} */ (this._rootView); }
+    get tablesections() { return /** @type {Object.<string, HTMLTableSectionElement>} */ (this._rootView); }
     get templates() { return /** @type {Object.<string, HTMLTemplateElement>} */ (this._rootView); }
     get times() { return /** @type {Object.<string, HTMLTimeElement>} */ (this._rootView); }
     get titles() { return /** @type {Object.<string, HTMLTitleElement>} */ (this._rootView); }
