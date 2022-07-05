@@ -24,7 +24,7 @@ export default class Network {
      * @param {object} [headers]
      */
     static async post(url, body = {}, headers = {}) {
-        if (typeof body === 'object') {
+        if (typeof body !== 'string') {
             body = JSON.stringify(body);
         }
         if (Network.defaults.host !== null && url.match(/^[a-zA-Z]+:\/\//) === null) {
@@ -32,7 +32,7 @@ export default class Network {
         }
         return await fetch(url, {
             method: 'POST',
-            body: JSON.stringify(body),
+            body,
             credentials: 'include',
             headers: {
                 ...Network.defaults.headers,
