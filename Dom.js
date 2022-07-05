@@ -358,6 +358,7 @@ class ElementMapping {
     get tablecells() { return /** @type {Object.<string, HTMLTableCellElement>} */ (this._rootView); }
     get tables() { return /** @type {Object.<string, HTMLTableElement>} */ (this._rootView); }
     get tablerows() { return /** @type {Object.<string, HTMLTableRowElement>} */ (this._rootView); }
+    get tablesections() { return /** @type {Object.<string, HTMLTableSectionElement>} */ (this._rootView); }
     get templates() { return /** @type {Object.<string, HTMLTemplateElement>} */ (this._rootView); }
     get times() { return /** @type {Object.<string, HTMLTimeElement>} */ (this._rootView); }
     get titles() { return /** @type {Object.<string, HTMLTitleElement>} */ (this._rootView); }

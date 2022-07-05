@@ -17,7 +17,7 @@ export default class Data {
         if (key === undefined) {
             return source !== undefined;
         } else {
-            if (typeof source === 'object') {
+            if (typeof source === 'object' && source !== null) {
                 return Data.has(source[key], path);
             }
             return false;
@@ -101,14 +101,14 @@ export default class Data {
      * @callback ObjectValueCallback
      * @param {any} value
      * @param {string} path
-     * @returns {void}
      * 
      * Calls {@link callback} for every value in {@link source}
      * @param {object} source Source object
      * @param {ObjectValueCallback} callback Called for every value in {@link source}
-     * @param {boolean} traverseArray True to traverse into an array, false to treat an array as a ending value
+     * @param {boolean} [traverseArray] True to traverse into an array, false to treat an array as a ending value
+     * @param {boolean} [eachObject] True to call {@link callback} for each object being walked over, false otherwise
      */
-    static walk(source, callback, traverseArray = false) {
+    static walk(source, callback, traverseArray = false, eachObject = false) {
         /**
          * @param {Object} source
          * @param {string[]} path
@@ -118,6 +118,9 @@ export default class Data {
                 const value = source[key];
                 const newPath = [...path, key];
                 if (typeof value === 'object' && (traverseArray || !Array.isArray(value))) {
+                    if (eachObject) {
+                        callback(value, Data.getPathString(newPath))
+                    }
                     walk(value, newPath);
                 } else {
                     callback(value, Data.getPathString(newPath));
@@ -192,6 +195,28 @@ export default class Data {
             this.set(destination, path, fallback);
         }
         return this.get(destination, path);
+    }
+
+    /**
+     * @callback ObjectFilterPredicate
+     * @param {any} value
+     * @returns {boolean} True 
+     * 
+     * @param {object} source 
+     * @param {ObjectFilterPredicate} predicate
+     * @param {boolean} [eachObject] True to check each object traversed against {@link predicate}, false to only check ending values.
+     */
+    static filter(source, predicate, eachObject) {
+        const result = {};
+        Data.walk(source, (value, path) => {
+            if (predicate(value)) {
+                Data.set(result, path, value);
+                return false;
+            } else {
+                return true;
+            }
+        }, true, eachObject);
+        return result;
     }
 
 }
