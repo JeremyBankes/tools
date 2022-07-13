@@ -31,6 +31,23 @@ export default class Text {
     }
 
     /**
+     * Converts a string to camel case
+     * I.E.
+     * Hello There, World! -> helloThereWorld
+     * @param {string} string
+     */
+    static toCamel(string) {
+        string = string.replace(/[^A-Za-z0-9]+/g, ' ').trim().toLowerCase();
+        string = string.split(/ /g).map((piece, index) => {
+            if (index > 0) {
+                return piece.charAt(0).toUpperCase() + piece.substring(1);
+            }
+            return piece;
+        }).join('');
+        return string;
+    }
+
+    /**
      * @param {string} singular
      * @param {number} count
      */

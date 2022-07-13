@@ -177,6 +177,34 @@ export default class Dom {
     }
 
     /**
+     * @callback SlowedInputCallback
+     * @param {Event} event
+     * @param {boolean} slowed
+     * @returns
+     * 
+     * Attaches a input listener that only fires a given amount of time after the user has stopped inputting.
+     * This is useful to reducing the amount of API requests for suggestions-as-you-type search boxes.
+     * 
+     * @param {HTMLInputElement} input The element to attach the listener to
+     * @param {SlowedInputCallback} callback The callback to be run after inputting
+     * @param {number} delay The time in milliseconds to wait after the user has inputted until firing the callback 
+     */
+    static setSlowedInputListener(input, callback, delay = 500) {
+        if (callback) {
+            let timeout = null;
+            input.oninput = event => {
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+                timeout = setTimeout(() => callback(event, true), delay);
+                callback(event, false);
+            };
+        } else {
+            input.oninput = null;
+        }
+    }
+
+    /**
      * Creates a client-side form submission handler
      * 
      * @callback FormSuccessCallback
