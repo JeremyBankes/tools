@@ -316,7 +316,7 @@ export default class Dom {
             addEventListener('DOMContentLoaded', () => {
                 const mapping = Dom.getMapping();
                 Promise.all(Dom._onReadyListeners.map(readyListener => {
-                    readyListener(mapping);
+                    return readyListener(mapping);
                 })).catch(error => {
                     for (const errorListner of Dom._onErrorListeners) {
                         errorListner(error, mapping);

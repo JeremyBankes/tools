@@ -173,19 +173,25 @@ export default class Text {
             milliseconds -= seconds * secondInMilliseconds;
         }
         if (!showMilliseconds) {
-            seconds += Math.round(milliseconds / secondInMilliseconds);
+            if (showSeconds) {
+                seconds += Math.round(milliseconds / secondInMilliseconds);
+            }
             milliseconds = 0;
         }
         const line = [];
         if (days > 0) {
             line.push(days + ' ' + Text.pluralize('day', days));
-        } else if (hours > 0) {
+        }
+        if (hours > 0) {
             line.push(hours + ' ' + Text.pluralize('hour', hours));
-        } else if (minutes > 0) {
+        }
+        if (minutes > 0) {
             line.push(minutes + ' ' + Text.pluralize('minute', minutes));
-        } else if (seconds > 0) {
+        }
+        if (seconds > 0) {
             line.push(seconds + ' ' + Text.pluralize('second', seconds));
-        } else if (milliseconds > 0) {
+        }
+        if (milliseconds > 0) {
             line.push(milliseconds + ' ' + Text.pluralize('millisecond', milliseconds));
         }
         return line.join(', ');
