@@ -332,7 +332,7 @@ export default class Dom {
  * Holds a mapping of IDs to their corresponding elements
  * An easy-to-use typed, wrapping of documnet.getElementById()
  */
-class ElementMapping {
+export class ElementMapping {
 
     /**
      * @param {Document|DocumentFragment} root 
